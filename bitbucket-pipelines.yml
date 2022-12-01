@@ -1,0 +1,113 @@
+image: node:16-bullseye
+
+definitions:
+  services:
+    docker:
+      memory: 2048
+
+  steps:
+    - step: &InstallModulesAndBuild
+        name: Install Modules
+        caches:
+          - node
+        script:
+          - apt-get update
+          - yarn
+          - yarn build
+
+    - step: &IntegrationTests
+        name: Integration Tests
+        services:
+          - docker
+        caches:
+          - node
+        script:
+          - export DOCKER_BUILDKIT=0
+          - curl -L https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m) > /usr/local/bin/docker-compose
+          - chmod +x /usr/local/bin/docker-compose
+          - npm i -g zx
+          - chmod +x export-vars.mjs
+          - ./export-vars.mjs
+          - yarn run docker:cicd:up:db
+          - yarn run docker:cicd:test:integration
+
+    - step: &UnitTests
+        name: Unit Tests
+        script:
+          - yarn add jest
+          - yarn run test:unit
+
+    - step: &BoM
+        name: BoM
+        caches:
+          - node
+        script:
+          - npm install
+          - npm install --global @cyclonedx/cyclonedx-npm
+          - cyclonedx-npm --output-file backend_bom.xml
+        artifacts:
+          - backend_bom.xml
+
+    - step: &DependencyCheck
+        size: 2x
+        name: Dependency Check
+        caches:
+          - node
+        script:
+          - apt-get update
+          - apt-get -y install default-jre
+
+          # owasp-dependency-check does not support yarn.lock
+          - npm install
+          - npm run owaspdc
+        artifacts:
+          - dependency-check-reports/dependency-check-report.html
+
+    - step: &DeployToECS
+        size: 2x
+        name: Deploy to ECS
+        image: python:3.9.13-bullseye
+        services:
+          - docker
+        cache:
+          - pip
+        script:
+          - pip3 install awscli
+          - aws --region ${AWS_DEFAULT_REGION} ecr get-login-password | docker login --password-stdin --username AWS "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
+          - export BUILD_ID=${BITBUCKET_BRANCH}_${BITBUCKET_COMMIT}_${BITBUCKET_BUILD_NUMBER}
+          - docker build --no-cache --progress plain -t ${AWS_REGISTRY_URL}:${BUILD_ID} .
+          - docker push ${AWS_REGISTRY_URL}:${BUILD_ID}
+          - docker tag ${AWS_REGISTRY_URL}:${BUILD_ID} ${AWS_REGISTRY_URL}:${TAG}-latest
+          - docker push ${AWS_REGISTRY_URL}:${TAG}-latest
+          - pipe: atlassian/aws-ecs-deploy:1.6.2
+            variables:
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+              CLUSTER_NAME: $ECS_CLUSTER_NAME
+              SERVICE_NAME: $ECS_SERVICE_NAME
+              FORCE_NEW_DEPLOYMENT: 'true'
+              DEBUG: 'true'
+
+pipelines:
+  pull-requests:
+    '**':
+      - step: *InstallModulesAndBuild
+      - parallel:
+          - step: *DependencyCheck
+          - step: *UnitTests
+          - step: *IntegrationTests
+          - step: *BoM
+
+  branches:
+    main:
+      - step: *InstallModulesAndBuild
+      - parallel:
+          - step: *DependencyCheck
+          - step: *UnitTests
+          - step: *IntegrationTests
+          - step: *BoM
+
+      - step:
+          <<: *DeployToECS
+          deployment: production

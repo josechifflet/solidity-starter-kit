@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES6",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES6", "dom"],
+    "outDir": "dist",
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "composite": false,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": false,
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "strictPropertyInitialization": false,
+    "skipLibCheck": true,
+    "typeRoots": ["./node_modules/@types"]
+  },
+  "compileOnSave": true,
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "**/__tests__/**.ts",
+    "**/__tests__setup__/**.ts",
+    "**/__tests__suites__/**.ts",
+    "src/**/*.test.ts"
+  ]
+}
