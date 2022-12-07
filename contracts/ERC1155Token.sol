@@ -10,29 +10,31 @@ import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
 contract ERC1155Token is VRFConsumerBaseV2, ERC1155, Ownable {
-    uint[] public ids; // uint array of ids
-    string[] public boxes; // string array of boxes
+    uint public mintFee = 0 wei; // Mintfee, 0 by default. only used in mint function, not batch.
+    string public baseMetadataURI; // The token metadata URI
+    string public name; // The token mame
 
-    mapping(string => uint) public boxToId; // box to id mapping
-    mapping(uint => string) public idToBox; // id to box mapping
+    uint[] public boxIds; // uint array of ids
+    string[] public boxNames; // string array of box names
 
-    uint public mintFee = 0 wei; // mintfee, 0 by default. only used in mint function, not batch.
+    mapping(string => uint) public boxToId; // box name to id mapping
+    mapping(uint => string) public idToBox; // id to box name mapping
 
-    string public baseMetadataURI; // the token metadata URI
-    string public name; // the token mame
-
+    // VRF Chainlink data
     VRFCoordinatorV2Interface COORDINATOR;
 
     uint64 s_subscriptionId = 2808;
+
+    /** https://docs.chain.link/vrf/v2/subscription/supported-networks */
+    /** Polygon (Matic) Mumbai testnet */
     address vrfCoordinator = 0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed;
     bytes32 keyHash =
         0x4b09e658ed251bcafeebbc69400383d49f344ace09b9576fe248bb02c003fe9f;
     address link_token_contract = 0x326C977E6efc84E512bB9C30f76E30c160eD06FB;
 
-    event RequestSent(uint256 requestId, uint32 numWords);
-    event RequestFulfilled(uint256 requestId, uint256[] randomWords);
-
-    struct RequestStatus {
+    event VRFRequestSent(uint256 requestId, uint32 numWords);
+    event VRFRequestFulfilled(uint256 requestId, uint256[] randomWords);
+    struct VRFRequestStatus {
         bool fulfilled; // whether the request has been successfully fulfilled
         bool exists; // whether a requestId exists
         uint256[] randomWords;
@@ -40,12 +42,12 @@ contract ERC1155Token is VRFConsumerBaseV2, ERC1155, Ownable {
         uint _id;
         uint256 amount;
     }
-    mapping(uint256 => RequestStatus)
-        public s_requests; /* requestId --> requestStatus */
+    mapping(uint256 => VRFRequestStatus)
+        public vrfRequests; /* requestId -> requestStatus */
 
-    // past requests Id.
-    uint256[] public requestIds;
-    uint256 public lastRequestId;
+    // Past requests Id.
+    uint256[] public vrfRequestIds;
+    uint256 public vrfLastRequestId;
 
     // Depends on the number of requested values that you want sent to the
     // fulfillRandomWords() function. Storing each word costs about 20,000 gas,
@@ -53,7 +55,7 @@ contract ERC1155Token is VRFConsumerBaseV2, ERC1155, Ownable {
     // this limit based on the network that you select, the size of the request,
     // and the processing of the callback request in the fulfillRandomWords()
     // function.
-    uint32 callbackGasLimit = 200000000000;
+    uint32 callbackGasLimit = 2500000;
 
     // The default is 3, but you can set this higher.
     uint16 requestConfirmations = 3;
@@ -71,14 +73,15 @@ contract ERC1155Token is VRFConsumerBaseV2, ERC1155, Ownable {
         string[] memory _boxes,
         uint[] memory _ids
     ) ERC1155(_uri) VRFConsumerBaseV2(vrfCoordinator) {
+        setURI(_uri);
+        name = _contractName;
+        baseMetadataURI = _uri;
         COORDINATOR = VRFCoordinatorV2Interface(vrfCoordinator);
 
-        boxes = _boxes;
-        ids = _ids;
+        boxNames = _boxes;
+        boxIds = _ids;
         createMapping();
-        setURI(_uri);
-        baseMetadataURI = _uri;
-        name = _contractName;
+
         transferOwnership(tx.origin);
     }
 
@@ -138,7 +141,7 @@ contract ERC1155Token is VRFConsumerBaseV2, ERC1155, Ownable {
             callbackGasLimit,
             numWords
         );
-        s_requests[requestId] = RequestStatus({
+        vrfRequests[requestId] = VRFRequestStatus({
             randomWords: new uint256[](0),
             exists: true,
             fulfilled: false,
@@ -146,9 +149,9 @@ contract ERC1155Token is VRFConsumerBaseV2, ERC1155, Ownable {
             _id: _id,
             amount: amount
         });
-        requestIds.push(requestId);
-        lastRequestId = requestId;
-        emit RequestSent(requestId, numWords);
+        vrfRequestIds.push(requestId);
+        vrfLastRequestId = requestId;
+        emit VRFRequestSent(requestId, numWords);
         return requestId;
     }
 
@@ -156,16 +159,16 @@ contract ERC1155Token is VRFConsumerBaseV2, ERC1155, Ownable {
         uint256 _requestId,
         uint256[] memory _randomWords
     ) internal override {
-        require(s_requests[_requestId].exists, "request not found");
+        require(vrfRequests[_requestId].exists, "request not found");
 
-        s_requests[_requestId].fulfilled = true;
-        s_requests[_requestId].randomWords = _randomWords;
-        emit RequestFulfilled(_requestId, _randomWords);
+        vrfRequests[_requestId].fulfilled = true;
+        vrfRequests[_requestId].randomWords = _randomWords;
+        emit VRFRequestFulfilled(_requestId, _randomWords);
 
         _mint(
-            s_requests[_requestId].account,
-            s_requests[_requestId]._id,
-            s_requests[_requestId].amount,
+            vrfRequests[_requestId].account,
+            vrfRequests[_requestId]._id,
+            vrfRequests[_requestId].amount,
             ""
         );
     }

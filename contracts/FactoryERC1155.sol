@@ -28,7 +28,6 @@ contract FactoryERC1155 {
         uint[] memory _ids,
         string[] memory _names
     ) public returns (address) {
-        /** api ['A','B','C'] */
         ERC1155Token t = new ERC1155Token(_contractName, _uri, _names, _ids);
         tokens.push(t);
         indexToContract[tokens.length - 1] = address(t);
