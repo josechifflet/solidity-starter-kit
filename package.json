@@ -49,6 +49,7 @@
   "dependencies": {
     "@maticnetwork/maticjs": "^3.5.0",
     "@maticnetwork/maticjs-web3": "^1.0.3",
+    "@openzeppelin/contracts": "^4.8.0",
     "@truffle/hdwallet-provider": "^2.1.2",
     "compression": "^1.7.4",
     "dotenv": "^16.0.3",

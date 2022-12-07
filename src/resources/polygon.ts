@@ -1,10 +1,7 @@
-import { POSClient, use } from '@maticnetwork/maticjs';
-import { Web3ClientPlugin } from '@maticnetwork/maticjs-web3';
+import { POSClient } from '@maticnetwork/maticjs';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import Web3 from 'web3';
 import { getContractAbi } from '../utils/getAbi';
-
-use(Web3ClientPlugin);
 
 export class Polygon {
   web3: Web3;
@@ -30,7 +27,7 @@ export class Polygon {
     fromAddress: string;
   }) => {
     const contractAbi = getContractAbi('FactoryERC1155');
-
+    console.log(contractAbi);
     const walletProvider = new HDWalletProvider({
       privateKeys: [privateKey],
       providerOrUrl: 'https://rpc.ankr.com/polygon_mumbai',
@@ -42,7 +39,7 @@ export class Polygon {
       '0x524944c250Cb4bA208950Dbe3b207227Fd19866C',
     );
 
-    await erc1155FactoryContract.methods.mintERC1155(2, 'Venus', 1).send({ from: fromAddress });
+    await erc1155FactoryContract.methods.mintERC1155(1, 'Venus', 1).send({ from: fromAddress });
   };
 
   public getErc1155Balance = async ({

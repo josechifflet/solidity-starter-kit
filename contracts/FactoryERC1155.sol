@@ -5,10 +5,11 @@ pragma solidity ^0.8.4;
 
 import "./ERC1155Token.sol";
 
+// EARNFTFactory1155
 contract FactoryERC1155 {
-    ERC1155Token[] public tokens; // an array that contains different ERC1155 tokens deployed
-    mapping(uint256 => address) public indexToContract; // index to contract address mapping
-    mapping(uint256 => address) public indexToOwner; // index to ERC1155 owner address
+    ERC1155Token[] public tokens; // An array that contains different ERC1155 tokens deployed
+    mapping(uint256 => address) public indexToContract; // Index to contract address mapping
+    mapping(uint256 => address) public indexToOwner; // Index to ERC1155 owner address
 
     event ERC1155Created(address owner, address tokenContract); // emitted when ERC1155 token is deployed
     event ERC1155Minted(address owner, address tokenContract, uint amount); // emmited when ERC1155 token is minted
@@ -27,6 +28,7 @@ contract FactoryERC1155 {
         uint[] memory _ids,
         string[] memory _names
     ) public returns (address) {
+        /** api ['A','B','C'] */
         ERC1155Token t = new ERC1155Token(_contractName, _uri, _names, _ids);
         tokens.push(t);
         indexToContract[tokens.length - 1] = address(t);

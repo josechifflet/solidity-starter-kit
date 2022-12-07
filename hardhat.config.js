@@ -7,7 +7,7 @@ const GOERLI_RPC_URL = 'https://rpc.ankr.com/eth_goerli';
 const POLYGON_MAINNET_RPC_URL = 'https://rpc.ankr.com/polygon';
 const MUMBAI_RPC_URL = 'https://rpc.ankr.com/polygon_mumbai';
 
-const PRIVATE_KEY = '0x78b8a3d5c44210aaea1dc7caa968d02fef5da85a3059c63a86cc031e723f27d3';
+const PRIVATE_KEY = '0x8166f546bab6da521a8369cab06c5d2b9e46670292d85c875ee9ec20e84ffb61';
 
 // Your API key for Etherscan, obtain one at https://etherscan.io/
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || 'Your etherscan API key';
@@ -23,12 +23,6 @@ module.exports = {
   },
   networks: {
     hardhat: {
-      hardfork: 'merge',
-      // If you want to do some forking set `enabled` to true
-      forking: {
-        url: MAINNET_RPC_URL,
-        enabled: false,
-      },
       chainId: 31337,
     },
     localhost: {
